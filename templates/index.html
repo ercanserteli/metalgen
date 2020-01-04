@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Metal Album Generator</title>
+    <style>
+        .album-box{
+            display: inline-block;
+            width: 180px;
+            height: 200px;
+            vertical-align: top;
+        }
+        .album-table{
+            width: 740px;
+            text-align: center;
+            margin: auto;
+        }
+        .style-box{
+            width: 180px;
+            height: 180px;
+            display: inline-block;
+            vertical-align: top;
+            background-color: gray;
+        }
+        .style-table{
+            height: 180px;
+            text-align: center;
+            margin: auto auto 200px;
+        }
+        #symbol{
+            display: inline-block;
+            font-size: 5em;
+        }
+        #mix{
+            font-size: 5em;
+            background-color: cornflowerblue;
+            color: whitesmoke;
+            vertical-align: middle;
+        }
+    </style>
+</head>
+<body>
+    <h1 style="text-align: center">Metal Album Generator</h1>
+
+    <div class="album-table">
+        {% for cover, title, latents in albums %}
+            <div id="album-{{loop.index}}" class="album-box" data-latents="{{ latents }}">
+                <img id="cover-{{loop.index}}" src="data:image/png;base64,{{ cover }}" alt="Album cover for {{ title }}" draggable="true" ondragstart="drag(event)"/>
+                <p>{{ title }}</p>
+            </div>
+        {% endfor %}
+    </div>
+
+    <h2 style="text-align: center">Style Mixing</h2>
+    <div class="style-table">
+        <div class="style-box" id="style-2" ondrop="drop(event, this)" ondragover="allowDrop(event)"></div>
+        <div id="symbol">+</div>
+        <div class="style-box" id="style-1" ondrop="drop(event, this)" ondragover="allowDrop(event)"></div>
+        <button id="mix" onclick="styleMix()">=></button>
+        <div class="style-box" id="style-res">
+            <img src="" id="style-res-img"  />
+            <p id="style-res-title"></p>
+        </div>
+    </div>
+
+    <script>
+        let style_1 = document.getElementById("style-1");
+        let style_2 = document.getElementById("style-2");
+        let style_res = document.getElementById("style-res");
+        let style_res_img = document.getElementById("style-res-img");
+        let style_res_title = document.getElementById("style-res-title");
+
+        function styleMix() {
+            const l1 = style_1.dataset.latents;
+            const l2 = style_2.dataset.latents;
+            if(!!l1 && !!l2){
+                let req = new XMLHttpRequest();
+                req.open("POST", "/style-mix");
+                req.setRequestHeader("Content-Type", "application/json");
+                req.onloadend = function () {
+                    console.log(this.responseText);
+                    let result = JSON.parse(this.responseText);
+                    style_res_img.src = "data:image/png;base64," + result.cover;
+                    style_res_title.innerHTML = result.title;
+                };
+
+                req.send(JSON.stringify({latent_1: l1, latent_2: l2}));
+            }
+        }
+
+        function allowDrop(ev) {
+            ev.preventDefault();
+        }
+
+        function drag(ev) {
+            ev.dataTransfer.setData("latents", ev.target.parentElement.dataset.latents);
+            ev.dataTransfer.setData("id", ev.target.id);
+        }
+
+        function drop(ev, elem) {
+            ev.preventDefault();
+            const latents = ev.dataTransfer.getData("latents");
+            const id = ev.dataTransfer.getData("id");
+            if(!!elem.firstChild){
+                elem.removeChild(elem.firstChild);
+            }
+            elem.appendChild(document.getElementById(id).cloneNode());
+            elem.dataset.latents = latents;
+        }
+    </script>
+</body>
+</html>
