@@ -18,16 +18,16 @@ from .models import TitleGenerator
 
 def sample(device="cuda", int2char=None):
     gen = TitleGenerator(220, 2048, 1024, use_images=True).to(device)
-    gen.load_state_dict(torch.load("models/title-gen.pt"))
+    gen.load_state_dict(torch.load("titlegen/models/title-gen.pt"))
 
     if int2char is None:
-        int2char = load_int2char()
+        int2char = load_int2char("titlegen")
 
     gen.use_images = True
     gen.eval()
 
     for i in range(13):
-        img = Image.open("data/example-{}.{}".format(i, "png" if i < 10 else "jpg"))
+        img = Image.open("titlegen/data/example-{}.{}".format(i, "png" if i < 10 else "jpg"))
         transform = transforms.Compose([
             # transforms.RandomHorizontalFlip(),
             transforms.ToTensor(),
@@ -51,7 +51,7 @@ def train():
     # with open("int2char.json", "w") as f:
     #     json.dump(int2char, f)
 
-    int2char = load_int2char()
+    int2char = load_int2char("titlegen")
     dataset.set_int2char(int2char)
 
     # hide_size = int(0.98 * len(dataset))
@@ -101,7 +101,7 @@ def train():
             optimizer.step()
 
             # Print log info and save losses
-            if mb_index % 30 == 0:
+            if mb_index % 10 == 0:
                 print('Epoch: {}/{}, Step: {}/{}, Loss: {:.4f}'
                       .format(epoch, epochs, i, total_step, loss.item()))
 
@@ -128,7 +128,7 @@ def train():
         end_time = timer()
         print("Epoch finished in {:.3f} secs".format(end_time - start_time))
 
-    torch.save(best_model_dict, op.join("models", 'title-gen.pt'))
+    torch.save(best_model_dict, op.join("titlegen/models", 'title-gen.pt'))
 
     draw_loss_graphs(train_losses, test_losses)
     print("Best training loss:", min(train_losses))
@@ -209,8 +209,3 @@ def extract_resnet_features():
                 writer.writerow([album_id, features[j, :, :].reshape(-1).tolist()])
     np.save("album_resnet.npy", all_features)
 
-
-if __name__ == "__main__":
-    # extract_resnet_features()
-    # train()
-    sample()
